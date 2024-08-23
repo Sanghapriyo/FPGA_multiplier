@@ -25,25 +25,12 @@ architecture arch of multiplier4x4 is
     end component;
 
 begin
-	xy0(0) <= x(0) and y(0);
-	xy0(1) <= x(1) and y(0);
-	xy0(2) <= x(2) and y(0);
-	xy0(3) <= x(3) and y(0);
-
-	xy1(0) <= x(0) and y(1);
-	xy1(1) <= x(1) and y(1);
-	xy1(2) <= x(2) and y(1);
-	xy1(3) <= x(3) and y(1);
-
-	xy2(0) <= x(0) and y(2);
-	xy2(1) <= x(1) and y(2);
-	xy2(2) <= x(2) and y(2);
-	xy2(3) <= x(3) and y(2);
-
-	xy3(0) <= x(0) and y(3);
-	xy3(1) <= x(1) and y(3);
-	xy3(2) <= x(2) and y(3);
-	xy3(3) <= x(3) and y(3);
+	xy_gen: for i in 0 to 3 generate
+	        xy0(i) <= x(i) and y(0);
+	        xy1(i) <= x(i) and y(1);
+	        xy2(i) <= x(i) and y(2);
+	        xy3(i) <= x(i) and y(3);
+    	end generate;
 
 	FA1: fulladder port map (xy0(2), xy1(1), c1(0), c1(1), s1(1)); 
 	FA2: fulladder port map (xy0(3), xy1(2), c1(1), c1(2), s1(2)); 

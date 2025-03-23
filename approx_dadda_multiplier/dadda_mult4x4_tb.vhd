@@ -51,8 +51,6 @@ begin
 
         accuracy <= (correct_count * 100.0) / total_tests;
 
-        report "Accuracy of dadda_mult4x4: " & real'image(accuracy) & "%";
-
         wait;
     end process;
 end testbench;

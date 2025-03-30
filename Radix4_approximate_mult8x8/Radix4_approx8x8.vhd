@@ -15,10 +15,11 @@ entity Radix4_approx8x8 is
 --        Scomp0, Scomp1, Scomp2, Scomp3, Scomp4, Scomp5, Scomp6, Scomp7: out STD_LOGIC_VECTOR(1 downto 0);
 --        Ssum0, Ssum1, Ssum2, Ssum3, Ssum4: out STD_LOGIC_VECTOR(3 downto 0);
 --        Scar: out STD_LOGIC_VECTOR(3 downto 0);
+--        Stest1, Stest2: out STD_LOGIC_VECTOR(14 downto 0);
 
         A,B  : in  STD_LOGIC_VECTOR(7 downto 0);
         prod : out STD_LOGIC_VECTOR(15 downto 0)
-    );
+);
 end Radix4_approx8x8;
 
 
@@ -48,6 +49,7 @@ signal comp: pp_comp_array;
 
 signal Adder_results1, Adder_results2: STD_LOGIC_VECTOR(1 downto 0);
 signal car: STD_LOGIC_VECTOR(3 downto 0);
+signal car2: STD_LOGIC_VECTOR(1 downto 0);------------------------------------------experiment
 
 function approx_HA(a, b : std_logic) return std_logic_vector is
     variable result : std_logic_vector(1 downto 0);
@@ -211,43 +213,43 @@ begin
     
     -- generating partial products
 	all_pp_gen:for j in 0 to 3 generate
-	    gen(j)(0) <= (plus1_out(j) and A(0)) or (minus1_out(j) and A_comp(0));
-        pp_gen1:
-        for i in 1 to 7 generate
-            gen(j)(i) <= (plus1_out(j) and A(i)) or (minus1_out(j) and A_comp(i)) or (plus2_out(j) and A(i-1)) or (minus2_out(j) and A_comp(i-1));
+	    gen(j)(0) <= A(0) when plus1_out(j)='1' else
+                     A_comp(0) when minus1_out(j)='1' else '0';
+                     
+        pp_gen1: for i in 1 to 7 generate
+            gen(j)(i) <= A(i-1)       when plus2_out(j)='1' else
+                         A_comp(i-1)  when minus2_out(j)='1' else
+                         A(i)         when plus1_out(j)='1' else
+                         A_comp(i)    when minus1_out(j) = '1' else '0';
         end generate pp_gen1;
-        gen(j)(8) <= (plus1_out(j) and A(7)) or (minus1_out(j) and A_comp(7)) or (plus2_out(j) and A(7)) or (minus2_out(j) and A_comp(7));
-    
-        pp_fill1:
-           for i in 9 to 15 generate
-               gen(j)(i) <= gen(j)(8);
-        end generate pp_fill1;
+        
+        gen(j)(8) <= A(7)      when (plus1_out(j) or plus2_out(j)) = '1' else 
+                     A_comp(7) when (minus1_out(j) or minus2_out(j)) = '1' else '0';
+        gen(j)(15 downto 9) <= (others => gen(j)(8));
     end generate all_pp_gen;
     
     
-
-    --using 32 compressor
-    comp(0) <= approx_32(gen(0)(4), gen(1)(2), gen(2)(0));
-    comp(1) <= approx_32(gen(0)(5), gen(1)(3), gen(2)(1));
-    
-    --using 42 compressor
-    pp_gen1: for i in 2 to 7 generate
-        comp(i) <= approx_42(gen(0)(i+4), gen(1)(i+2), gen(2)(i), gen(3)(i-2));
-    end generate;
-
-    
-    --generating product P(0) to P(3)
+    --generating product P(0) to P(2)
     prod(0) <= gen(0)(0);
     prod(1) <= gen(0)(1);
     Adder_results1 <= approx_HA(gen(0)(2), gen(1)(0));
         prod(2) <= Adder_results1(0);
         car(0) <= Adder_results1(1);
-    Adder_results2 <= exact_FA(car(0), gen(0)(3), gen(1)(1));
-        prod(3) <= Adder_results2(0);
-        car(1) <= Adder_results2(1);
+ 
    
-
-    --generating product P(4) to P(11)
+    comp(0) <= gen(1)(1) & gen(0)(3);
+          
+    --using 32 compressor
+    comp(1) <= approx_32(gen(0)(4), gen(1)(2), gen(2)(0));
+    comp(2) <= approx_32(gen(0)(5), gen(1)(3), gen(2)(1));   
+    
+    -- using 42 compressor
+    pp_gen1: for i in 3 to 7 generate
+        comp(i) <= approx_42(gen(0)(i+3), gen(1)(i+1), gen(2)(i-1), gen(3)(i-3));
+    end generate;
+   
+   
+    --generating product P(3) to P(10)
     comp0: for j in 0 to 1 generate  
         GEN_SUM0: for i in 0 to 3 generate       
             s1(j)(i) <= comp(i+j*4)(0) and comp(i+j*4)(1);
@@ -259,36 +261,37 @@ begin
             S       => s2(j),        
             O       => sum(j),       
             CO      => carries(j),   
-            CI      => car(j+1),  
+            CI      => car(j),  
             CYINIT  => '0'        
         );
-        car(j+2) <= carries(0)(3);         --Final carry-out
+        car(j+1) <= carries(j)(3);         --Final carry-out
         
         prod0: for i in 0 to 3 generate       
-            prod(i+4+j*4) <= sum(j)(i);
+            prod(i+3+j*4) <= sum(j)(i);
         end generate;
     end generate;
 
 
+    car2(0) <= gen(0)(10) and gen(1)(8) and gen(2)(6);  -- for better accuracy
+    car2(1) <= gen(1)(8) and gen(2)(6) and gen(3)(4);
 
-
-   --generating product P(12) to P(15)
-   GEN_SUM1: for i in 0 to 3 generate       
-        s1(2)(i) <= gen(0)(i+12) and gen(1)(i+10);
-        s2(2)(i) <= gen(0)(i+12) xor gen(1)(i+10);
-   end generate;
-   GEN_SUM2: for i in 0 to 3 generate       
-        s1(3)(i) <= gen(2)(i+8) and gen(3)(i+6);
-        s2(3)(i) <= gen(2)(i+8) xor gen(3)(i+6);
-   end generate;
-   comp1: for j in 2 to 3 generate 
+    --generating product P(12) to P(15)
+    GEN_SUM1: for i in 0 to 3 generate       
+        s1(2)(i) <= gen(0)(i+11) and gen(1)(i+9);
+        s2(2)(i) <= gen(0)(i+11) xor gen(1)(i+9);
+    end generate;
+    GEN_SUM2: for i in 0 to 3 generate       
+        s1(3)(i) <= gen(2)(i+7) and gen(3)(i+5);
+        s2(3)(i) <= gen(2)(i+7) xor gen(3)(i+5);
+    end generate;
+    comp1: for j in 2 to 3 generate 
         carry_inst1: CARRY4
         port map (
             DI      => s1(j),        
             S       => s2(j),        
             O       => sum(j),       
             CO      => carries(j),   
-            CI      => '0',       
+            CI      => car2(j-2),       
             CYINIT  => '0'        
         );  
     end generate;
@@ -296,21 +299,22 @@ begin
     GEN_SUM3: for i in 0 to 3 generate       
         s1(4)(i) <= sum(2)(i) and sum(3)(i);
         s2(4)(i) <= sum(2)(i) xor sum(3)(i);
-   end generate;
-   carry_inst2: CARRY4
+    end generate;
+    carry_inst2: CARRY4
         port map (
             DI      => s1(4),        
             S       => s2(4),        
             O       => sum(4),       
             CO      => carries(4),   
-            CI      => car(3),       
+            CI      => car(2),       
             CYINIT  => '0');
     prod1: for i in 0 to 3 generate       
-        prod(i+12) <= sum(4)(i);
+        prod(i+11) <= sum(4)(i);
     end generate;
 
+    prod(15) <= A(7) xor B(7);
+    
 
-	
 	
 	----------- for testbench ------------
 --	  Scomp0 <= comp(0);

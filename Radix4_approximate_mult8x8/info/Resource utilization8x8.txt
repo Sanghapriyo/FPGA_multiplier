@@ -71,4 +71,20 @@
 +----------+------+---------------------+
 
 
+ Power usage summary:
+---------------------
++--------------------------+--------------+
+| Total On-Chip Power (W)  | 6.382        |
+| Design Power Budget (W)  | Unspecified* |
+| Power Budget Margin (W)  | NA           |
+| Dynamic (W)              | 6.285        |
+| Device Static (W)        | 0.098        |
+| Effective TJA (C/W)      | 5.0          |
+| Max Ambient (C)          | 53.1         |
+| Junction Temperature (C) | 56.9         |
+| Confidence Level         | Low          |
+| Setting File             | ---          |
+| Simulation Activity File | ---          |
+| Design Nets Matched      | NA           |
++--------------------------+--------------+
 

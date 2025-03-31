@@ -3,8 +3,8 @@
 +-------------------------+------+-------+------------+-----------+-------+
 |        Site Type        | Used | Fixed | Prohibited | Available | Util% |
 +-------------------------+------+-------+------------+-----------+-------+
-| Slice LUTs*             |   89 |     0 |          0 |     20800 |  0.43 |
-|   LUT as Logic          |   89 |     0 |          0 |     20800 |  0.43 |
+| Slice LUTs*             |   52 |     0 |          0 |     20800 |  0.25 |
+|   LUT as Logic          |   52 |     0 |          0 |     20800 |  0.25 |
 |   LUT as Memory         |    0 |     0 |          0 |      9600 |  0.00 |
 | Slice Registers         |    0 |     0 |          0 |     41600 |  0.00 |
 |   Register as Flip Flop |    0 |     0 |          0 |     41600 |  0.00 |
@@ -60,14 +60,14 @@
 +----------+------+---------------------+
 | Ref Name | Used | Functional Category |
 +----------+------+---------------------+
-| LUT6     |   49 |                 LUT |
-| LUT5     |   28 |                 LUT |
+| LUT6     |   37 |                 LUT |
+| LUT5     |   25 |                 LUT |
 | OBUF     |   16 |                  IO |
 | IBUF     |   16 |                  IO |
-| LUT4     |   15 |                 LUT |
-| LUT2     |   13 |                 LUT |
+| LUT2     |   15 |                 LUT |
+| LUT3     |    7 |                 LUT |
 | CARRY4   |    5 |          CarryLogic |
-| LUT3     |    4 |                 LUT |
+| LUT4     |    4 |                 LUT |
 +----------+------+---------------------+
 
 

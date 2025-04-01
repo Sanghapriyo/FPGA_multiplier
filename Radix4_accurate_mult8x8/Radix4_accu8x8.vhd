@@ -8,16 +8,13 @@ use UNISIM.VComponents.all;
 
 entity Radix4_accu8x8 is
     Port (
-        ----------- for testbench ----------------
---        Szero_out, Splus1_out, Sminus1_out, Splus2_out, Sminus2_out: out STD_LOGIC_VECTOR(3 downto 0);
---        Sgen0,Sgen1,Sgen2,Sgen3: out STD_LOGIC_VECTOR(15 downto 0);
---        Ssum0, Ssum1, Ssum2, Ssum3, Ssum4, Ssum5, Ssum6: out STD_LOGIC_VECTOR(3 downto 0);
---        Scout: out STD_LOGIC_VECTOR(9 downto 0);
---        Sa_comp : out STD_LOGIC_VECTOR(7 downto 0);
+        ----------- for testbench ------------
+        -- Szero_out, Splus1_out, Sminus1_out, Splus2_out, Sminus2_out: out STD_LOGIC_VECTOR(3 downto 0);
+        -- Sgen0,Sgen1,Sgen2,Sgen3: out STD_LOGIC_VECTOR(15 downto 0);
+        -- Sa_comp : out STD_LOGIC_VECTOR(7 downto 0);
         
         A,B  : in  STD_LOGIC_VECTOR(7 downto 0);
-        prod : out STD_LOGIC_VECTOR(15 downto 0)
-    );
+        prod : out STD_LOGIC_VECTOR(15 downto 0) );
 end Radix4_accu8x8;
 
 
@@ -29,17 +26,23 @@ signal A_comp : STD_LOGIC_VECTOR(7 downto 0);
 type pp_array0 is array(3 downto 0) of STD_LOGIC_VECTOR(15 downto 0);
 signal gen: pp_array0;
 
-type pp_array1 is array(6 downto 0) of STD_LOGIC_VECTOR(3 downto 0);
-signal s1, s2: pp_array1;
-signal sum: pp_array1;
-signal carries : pp_array1;
-signal cout: STD_LOGIC_VECTOR (9 downto 0):= (others=>'0');
 
-type pp_array2 is array(2 downto 0) of STD_LOGIC_VECTOR(3 downto 0);
-signal x1, x2: pp_array2;
-signal sum_final: pp_array2;
-signal carries_final : pp_array2;
-signal cout_final: STD_LOGIC_VECTOR (4 downto 0):= (others=>'0');
+signal x1, x2: STD_LOGIC_VECTOR(15 downto 0);
+signal xout_carryA: STD_LOGIC_VECTOR(15 downto 0);
+signal xin_carryA: STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
+
+signal x3, x4: STD_LOGIC_VECTOR(11 downto 0);
+signal xout_carryB: STD_LOGIC_VECTOR(11 downto 0);
+signal xin_carryB: STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
+
+signal s1, s2: STD_LOGIC_VECTOR(11 downto 0);
+signal sout_carry: STD_LOGIC_VECTOR(11 downto 0);
+signal sin_carry: STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
+
+signal stageA: STD_LOGIC_VECTOR(15 downto 0);
+signal stageB: STD_LOGIC_VECTOR(11 downto 0);
+
+
 
 begin
 --    -- determining the position of 0 in the recoded booth value
@@ -164,132 +167,171 @@ begin
             
             
     -- 2's complement of 'A'
-    A_comp <= STD_LOGIC_VECTOR(not UNSIGNED(A) + 1);
-    
-    
-    -- generating partial products
-	all_pp_gen:
-	for j in 0 to 3 generate
-	   gen(j)(0) <= (plus1_out(j) and A(0)) or (minus1_out(j) and A_comp(0));
-        pp_gen1:
-        for i in 1 to 7 generate
-            gen(j)(i) <= (plus1_out(j) and A(i)) or (minus1_out(j) and A_comp(i)) or (plus2_out(j) and A(i-1)) or (minus2_out(j) and A_comp(i-1));
+    A_comp <= STD_LOGIC_VECTOR(-SIGNED(A)); 
+
+
+    ----GENERATING PARTIAL PRODUCTS----
+	all_pp_gen:for j in 0 to 3 generate
+	    gen(j)(0) <= A(0) when plus1_out(j)='1' else
+                     A_comp(0) when minus1_out(j)='1' else '0';
+                     
+        pp_gen1: for i in 1 to 7 generate
+            gen(j)(i) <= A(i-1)       when plus2_out(j)='1' else
+                         A_comp(i-1)  when minus2_out(j)='1' else
+                         A(i)         when plus1_out(j)='1' else
+                         A_comp(i)    when minus1_out(j) = '1' else '0';
         end generate pp_gen1;
-        gen(j)(8) <= (plus1_out(j) and A(7)) or (minus1_out(j) and A_comp(7)) or (plus2_out(j) and A(7)) or (minus2_out(j) and A_comp(7));
-    
-        pp_fill1:
-           for i in 9 to 15 generate
-               gen(j)(i) <= gen(j)(8);
-        end generate pp_fill1;
+        
+        gen(j)(8) <= A(7)      when (plus1_out(j) or plus2_out(j)) = '1' else 
+                     A_comp(7) when (minus1_out(j) or minus2_out(j)) = '1' else '0';
+        gen(j)(15 downto 9) <= (others => gen(j)(8));
+--        gen(j)((14-j*2) downto 9) <= (others => gen(j)(8));
     end generate all_pp_gen;
-    
-	
-	-- first stage summation
-	s1(0)(0) <= gen(0)(0) and '0';
-    s2(0)(0) <= gen(0)(0) xor '0';
-    s1(0)(1) <= gen(0)(1) and '0';
-    s2(0)(1) <= gen(0)(1) xor '0';
-    s1(0)(2) <= gen(0)(2) and gen(1)(0);
-    s2(0)(2) <= gen(0)(2) xor gen(1)(0);
-    s1(0)(3) <= gen(0)(3) and gen(1)(1);
-    s2(0)(3) <= gen(0)(3) xor gen(1)(1);
-	prep_01: for j in 1 to 3 generate 
-	   GEN_SUM0: for i in 0 to 3 generate       
-            s1(j)(i) <= gen(0)(i+j*4) and gen(1)(i-2+j*4);
-            s2(j)(i) <= gen(0)(i+j*4) xor gen(1)(i-2+j*4);
-        end generate;
-    end generate;
-    row01: for j in 0 to 3 generate  
-        carry_inst0: CARRY4
-        port map (
-            DI      => s1(j),        
-            S       => s2(j),        
-            O       => sum(j),       
-            CO      => carries(j),   
-            CI      => cout(j),       
-            CYINIT  => '0'        
-        );  
-        cout(j+1) <= carries(j)(3);          --Final carry-out
-    end generate;
-    
-    
-    -- second stage summation
-    s1(4)(0) <= '0';
-    s2(4)(0) <= gen(2)(0) xor '0';
-    s1(4)(1) <= '0';
-    s2(4)(1) <= gen(2)(1) xor '0';
-    s1(4)(2) <= gen(2)(2) and gen(3)(0);
-    s2(4)(2) <= gen(2)(2) xor gen(3)(0);
-    s1(4)(3) <= gen(2)(3) and gen(3)(1);
-    s2(4)(3) <= gen(2)(3) xor gen(3)(1);
-	prep_23: for j in 1 to 2 generate 
-        GEN_SUM1: for i in 0 to 3 generate       
-            s1(j+4)(i) <= gen(2)(i+j*4) and gen(3)(i-2+j*4);
-            s2(j+4)(i) <= gen(2)(i+j*4) xor gen(3)(i-2+j*4);
-        end generate;
-    end generate;
-    row23: for j in 4 to 6 generate  
-        -- Carry Chain Instantiation
-        carry_inst1: CARRY4
-        port map (
-            DI      => s1(j),        
-            S       => s2(j),        
-            O       => sum(j),       
-            CO      => carries(j),   
-            CI      => cout(j+1),  
-            CYINIT  => '0'        
-        );
-        cout(j+2) <= carries(j)(3);         --Final carry-out
-    end generate;
-	
-	
-	-- final stage summation
-	prep_final: for j in 0 to 2 generate 
-	   GEN_SUM2: for i in 0 to 3 generate       
-            x1(j)(i) <= sum(j+1)(i) and sum(j+4)(i);
-            x2(j)(i) <= sum(j+1)(i) xor sum(j+4)(i);
-        end generate;
-    end generate;
-	final_sum: for j in 0 to 2 generate 
-        carry_inst2: CARRY4
-        port map (
-            DI      => x1(j),        
-            S       => x2(j),      
-            O       => sum_final(j),       
-            CO      => carries_final(j),  
-            CI      => cout_final(j),   
-            CYINIT  => '0'       
-        );
-        cout_final(j+1) <= carries_final(j)(3);       --Final carry-out
-    end generate;
-	final_prod0: for i in 0 to 3 generate
-	   prod(i) <= sum(0)(i);
-	   prod(i+4) <= sum_final(0)(i);
-       prod(i+8) <= sum_final(1)(i);
-	   prod(i+12) <= sum_final(2)(i);
-	end generate;
 
-	
+    
+    ----GENERATING stageA----
+    x1(1 downto 0) <= (others => '0');            -- since '_' and '0' = '0'
+    lut_inst01: LUT6_2 
+    generic map(INIT => X"0FF0000066660000")      -- applying xor gate
+    port map(
+        I0 => gen(0)(0),
+        I1 => '0',
+        I2 => gen(0)(1),
+        I3 => '0',
+        I4 => '1',
+        I5 => '1',
+        O5 => x2(0),
+        O6 => x2(1) ); 
+--    Type_A1: for i in 0 to 1 generate 
+--            lut_inst0: LUT6_2 
+--            generic map(INIT => X"6000000080000000")
+--            port map(
+--                I0 => gen(0)(i),
+--                I1 => '0',
+--                I2 => '1',
+--                I3 => '1',
+--                I4 => '1',
+--                I5 => '1',
+--                O5 => x1(i),
+--                O6 => x2(i) );
+--        end generate;	
+    Type_A2: for i in 2 to 15 generate 
+            lut_inst1: LUT6_2 
+            generic map(INIT => X"6000000080000000")
+            port map(
+                I0 => gen(0)(i),
+                I1 => gen(1)(i-2),
+                I2 => '1',
+                I3 => '1',
+                I4 => '1',
+                I5 => '1',
+                O5 => x1(i),
+                O6 => x2(i) );
+    end generate;       
+    carry_chain_A: for z in 0 to 3 generate            -- Carry chain implementation
+            carry_inst0: CARRY4                                        
+            port map (
+                DI => x1(z*4+3 downto z*4),                                              
+                S  => x2(z*4+3 downto z*4),                                             
+                O  => stageA(z*4+3 downto z*4),                                
+                CO => xout_carryA(z*4+3 downto z*4),                                        
+                CI => xin_carryA(z),                            
+                CYINIT => '0' );
+            xin_carryA(z+1) <= xout_carryA(z*4+3);
+    end generate;        
+    prod(3 downto 0) <= stageA(3 downto 0);   
+    
+    
+    ----GENERATING stageB---- 
+    x3(1 downto 0) <= (others => '0');            -- since '_' and '0' = '0'
+    lut_inst02: LUT6_2 
+    generic map(INIT => X"0FF0000066660000")      -- applying xor gate
+    port map(
+        I0 => gen(2)(0),
+        I1 => '0',
+        I2 => gen(2)(1),
+        I3 => '0',
+        I4 => '1',
+        I5 => '1',
+        O5 => x4(0),
+        O6 => x4(1) );           
+--    Type_B1: for i in 0 to 1 generate 
+--            lut_inst2: LUT6_2 
+--            generic map(INIT => X"6000000080000000")
+--            port map(
+--                I0 => gen(2)(i),
+--                I1 => '0',
+--                I2 => '1',
+--                I3 => '1',
+--                I4 => '1',
+--                I5 => '1',
+--                O5 => x3(i),
+--                O6 => x4(i) );
+--        end generate;       
+    Type_B2: for i in 2 to 11 generate 
+            lut_inst3: LUT6_2 
+            generic map(INIT => X"6000000080000000")
+            port map(
+                I0 => gen(2)(i),
+                I1 => gen(3)(i-2),
+                I2 => '1',
+                I3 => '1',
+                I4 => '1',
+                I5 => '1',
+                O5 => x3(i),
+                O6 => x4(i) );
+    end generate;       
+    carry_chain_B: for z in 0 to 2 generate            -- Carry chain implementation
+            carry_inst1: CARRY4                                        
+            port map (
+                DI => x3(z*4+3 downto z*4),                                              
+                S  => x4(z*4+3 downto z*4),                                             
+                O  => stageB(z*4+3 downto z*4),                                
+                CO => xout_carryB(z*4+3 downto z*4),                                        
+                CI => xin_carryB(z),                            
+                CYINIT => '0' );
+            xin_carryB(z+1) <= xout_carryB(z*4+3);
+    end generate;	    
+        
+        
+    ----GENERATING prod(15 downto 4) FROM THE FAST ADDITION OF stageA & stageB---- 
+    Type_C: for i in 0 to 11 generate 
+            lut_inst3: LUT6_2 
+            generic map(INIT => X"6000000080000000")
+            port map(
+                I0 => stageA(i+4),
+                I1 => stageB(i),
+                I2 => '1',
+                I3 => '1',
+                I4 => '1',
+                I5 => '1',
+                O5 => s1(i),
+                O6 => s2(i) );
+    end generate;      
+    carry_chain_C: for z in 0 to 2 generate            -- Carry chain implementation
+            carry_inst1: CARRY4                                        
+            port map (
+                DI => s1(z*4+3 downto z*4),                                              
+                S  => s2(z*4+3 downto z*4),                                             
+                O  => prod(z*4+7 downto z*4+4),                                
+                CO => sout_carry(z*4+3 downto z*4),                                        
+                CI => sin_carry(z),                            
+                CYINIT => '0' );
+            sin_carry(z+1) <= sout_carry(z*4+3);
+    end generate;	  
+        
 
-	
-	------ for testbench -------
---    Ssum0<= sum(0);
---    Ssum1<= sum(1);
---    Ssum2<= sum(2);
---    Ssum3<= sum(3);
---    Ssum4<= sum(4);
---    Ssum5<= sum(5);
---    Ssum6<= sum(6);
---    Scout <= cout;
---    SA_comp <= A_comp;
-----    Szero_out <= zero_out; 
---    Splus1_out <= plus1_out; 
---    Sminus1_out <= minus1_out;
---    Splus2_out <= plus2_out;
---    Sminus2_out <= minus2_out;
---    Sgen0 <= gen(0);
---    Sgen1 <= gen(1);
---    Sgen2 <= gen(2);
---    Sgen3 <= gen(3);
+
+	------ for testbench ------- 
+--     SA_comp <= A_comp;
+-- --    Szero_out <= zero_out; 
+--     Splus1_out <= plus1_out; 
+--     Sminus1_out <= minus1_out;
+--     Splus2_out <= plus2_out;
+--     Sminus2_out <= minus2_out;
+--     Sgen0 <= gen(0);
+--     Sgen1 <= gen(1);
+--     Sgen2 <= gen(2);
+--     Sgen3 <= gen(3);
     
 end Behavioral;

@@ -3,8 +3,8 @@
 +-------------------------+------+-------+------------+-----------+-------+
 |        Site Type        | Used | Fixed | Prohibited | Available | Util% |
 +-------------------------+------+-------+------------+-----------+-------+
-| Slice LUTs*             |   96 |     0 |          0 |     20800 |  0.46 |
-|   LUT as Logic          |   96 |     0 |          0 |     20800 |  0.46 |
+| Slice LUTs*             |   61 |     0 |          0 |     20800 |  0.29 |
+|   LUT as Logic          |   61 |     0 |          0 |     20800 |  0.29 |
 |   LUT as Memory         |    0 |     0 |          0 |      9600 |  0.00 |
 | Slice Registers         |    0 |     0 |          0 |     41600 |  0.00 |
 |   Register as Flip Flop |    0 |     0 |          0 |     41600 |  0.00 |
@@ -45,10 +45,9 @@
 +----------+------+---------------------+
 | Ref Name | Used | Functional Category |
 +----------+------+---------------------+
-| LUT6     |   56 |                 LUT |
-| LUT5     |   24 |                 LUT |
-| LUT2     |   24 |                 LUT |
-| LUT4     |   21 |                 LUT |
+| LUT6     |   42 |                 LUT |
+| LUT5     |   42 |                 LUT |
+| LUT2     |   32 |                 LUT |
 | OBUF     |   16 |                  IO |
 | IBUF     |   16 |                  IO |
 | CARRY4   |   10 |          CarryLogic |
@@ -69,4 +68,21 @@
 | Ref Name | Used |
 +----------+------+
 
+
+ Power Usage
+-------------
++--------------------------+--------------+
+| Total On-Chip Power (W)  | 6.729        |
+| Design Power Budget (W)  | Unspecified* |
+| Power Budget Margin (W)  | NA           |
+| Dynamic (W)              | 6.629        |
+| Device Static (W)        | 0.101        |
+| Effective TJA (C/W)      | 5.0          |
+| Max Ambient (C)          | 51.4         |
+| Junction Temperature (C) | 58.6         |
+| Confidence Level         | Low          |
+| Setting File             | ---          |
+| Simulation Activity File | ---          |
+| Design Nets Matched      | NA           |
++--------------------------+--------------+
 

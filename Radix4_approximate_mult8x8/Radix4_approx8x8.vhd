@@ -30,10 +30,8 @@ signal a_comp : STD_LOGIC_VECTOR(7 downto 0);
 type pp_array0 is array(3 downto 0) of STD_LOGIC_VECTOR(15 downto 0);
 signal gen: pp_array0;
 
-
-
-
-
+type pp_comp_array is array(7 downto 0) of STD_LOGIC_VECTOR(1 downto 0);
+signal comp: pp_comp_array;
 
 signal s1, s2: STD_LOGIC_VECTOR(11 downto 0);
 signal sum: STD_LOGIC_VECTOR(11 downto 0);
@@ -43,53 +41,38 @@ signal x1, x2: STD_LOGIC_VECTOR(7 downto 0);
 signal x_carry: STD_LOGIC_VECTOR(7 downto 0);
 signal z1, z2: STD_LOGIC_VECTOR(3 downto 0);
 
-
-
-
-
-type pp_comp_array is array(7 downto 0) of STD_LOGIC_VECTOR(1 downto 0);
-signal comp: pp_comp_array;
-
-signal Adder_results1, Adder_results2: STD_LOGIC_VECTOR(1 downto 0);
+signal HA_result: STD_LOGIC_VECTOR(1 downto 0);
 signal car: STD_LOGIC_VECTOR(3 downto 0);
 signal car2: STD_LOGIC_VECTOR(1 downto 0);
 
+
+-- Optimized Approximate Half Adder (HA)
 function approx_HA(a, b : std_logic) return std_logic_vector is
     variable result : std_logic_vector(1 downto 0);
-    begin
-    result(0) := a or b;  -- Sum
-    result(1) := a and b;  -- Carry
+begin
+    result := (a and b) & (a or b);  -- Concatenation avoids extra logic
     return result;
 end approx_HA;
 
-function exact_FA(a, b, c : std_logic) return std_logic_vector is
-    variable result : std_logic_vector(1 downto 0);
-    begin
-    result(0) := a xor b xor c;  -- Sum
-    result(1) := (a and b) or (c and b) or (a and c);  -- Carry
-    return result;
-end exact_FA;
-    
--- approximate 3:2 compressor
+-- Optimized Approximate 3:2 Compressor
 function approx_32(P0, P1, P2: std_logic) return std_logic_vector is
     variable result: std_logic_vector(1 downto 0);
-    begin
-    result(1) := (P0 and P1) or P2;  -- First output
-    result(0) := P0 or P1;           -- Second output
+begin
+    result := ((P0 or P1) and P2) & (P0 or P1);  -- Less AND/OR usage
     return result;
 end approx_32;
 
--- approximate 4:2 compressor
+-- Optimized Approximate 4:2 Compressor
 function approx_42(P0, P1, P2, P3: std_logic) return std_logic_vector is
     variable result: std_logic_vector(1 downto 0);
-    begin
-    result(1) := (P0 and P1) or P2 or P3;  -- First output
-    result(0) := P0 or P1 or (P2 and P3);  -- Second output
+begin
+    result := ((P0 or P1) or P2 or P3) & (P0 or P1 or (P2 and P3));
     return result;
 end approx_42;
 
+
 begin
---    -- determining the position of +1 in the recoded booth value
+--    -- determining the position of 0 in the recoded booth value
 --    lut_inst0: LUT6_2
 --        generic map(INIT => X"F000000F81818181") 
 --        port map(
@@ -211,7 +194,7 @@ begin
             
             
     -- 2's complement of 'A'
-    A_comp <= STD_LOGIC_VECTOR(not UNSIGNED(A) + 1);
+    A_comp <= STD_LOGIC_VECTOR(-SIGNED(A)); 
     
     
     -- generating partial products
@@ -229,28 +212,31 @@ begin
         gen(j)(8) <= A(7)      when (plus1_out(j) or plus2_out(j)) = '1' else 
                      A_comp(7) when (minus1_out(j) or minus2_out(j)) = '1' else '0';
         gen(j)(15 downto 9) <= (others => gen(j)(8));
---        gen(j)((14-j*2) downto 9) <= (others => gen(j)(8));
     end generate all_pp_gen;
     
     
     --generating product P(0) to P(2)
     prod(0) <= gen(0)(0);
     prod(1) <= gen(0)(1);
-    Adder_results1 <= approx_HA(gen(0)(2), gen(1)(0));
-        prod(2) <= Adder_results1(0);
-        car(0) <= Adder_results1(1);
+    HA_result <= approx_HA(gen(0)(2), gen(1)(0));
+        prod(2) <= HA_result(0);
+        car(0) <= HA_result(1);
  
- 
+
     comp(0) <= gen(1)(1) & gen(0)(3);
       
     --using 32 compressor
     comp(1) <= approx_32(gen(0)(4), gen(1)(2), gen(2)(0));
-    comp(2) <= approx_32(gen(0)(5), gen(1)(3), gen(2)(1));       
+    comp(2) <= approx_32(gen(0)(5), gen(1)(3), gen(2)(1));   
     
     -- using 42 compressor
     pp_gen1: for i in 3 to 7 generate
         comp(i) <= approx_42(gen(0)(i+3), gen(1)(i+1), gen(2)(i-1), gen(3)(i-3));
     end generate;
+ 
+   
+    car2(0) <= gen(0)(10) and gen(1)(8) and gen(2)(6);  -- -- previously it was car2(0)<='0'; car2(1)<='0';
+    car2(1) <= gen(1)(8) and gen(2)(6) and gen(3)(4);
 
     Type_A: for i in 0 to 7 generate 
         lut_inst0: LUT6_2 
@@ -265,11 +251,7 @@ begin
             O5 => s1(i),
             O6 => s2(i)
         );
-    end generate Type_A;
-    
-    
-    car2(0) <= gen(0)(10) and gen(1)(8) and gen(2)(6);-- --    previously it was car2(0)<='0'; car2(1)<='0';
-    car2(1) <= gen(1)(8) and gen(2)(6) and gen(3)(4);
+    end generate Type_A; 
     
     Type_B: for i in 0 to 3 generate 
         lut_inst1: LUT6_2 
@@ -350,7 +332,24 @@ begin
     prod(15) <= A(7) xor B(7);
 
 
+
+	
     ----------- for testbench ------------
+
+--    -- 2nd step binary
+--    Stest1(2 downto 0) <= gen(0)(2 downto 0);
+--	test1: for i in 0 to 7 generate       
+--        Stest1(i+3) <= comp(i)(0);
+--    end generate;
+--    Stest1(14 downto 11) <= z1;
+  
+--    Stest2(1 downto 0) <= (others => '0');
+--    Stest2(2) <= gen(1)(0);
+--	test3: for i in 0 to 7 generate       
+--        Stest2(i+3) <= comp(i)(1);
+--    end generate;
+--    Stest2(14 downto 11) <= z2;
+	
 --	  Scomp0 <= comp(0);
 --    Scomp1 <= comp(1);
 --    Scomp2 <= comp(2);

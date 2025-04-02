@@ -33,6 +33,10 @@ signal gen: pp_array0;
 type pp_comp_array is array(7 downto 0) of STD_LOGIC_VECTOR(1 downto 0);
 signal comp: pp_comp_array;
 
+signal HA_result: STD_LOGIC_VECTOR(1 downto 0);
+signal car: STD_LOGIC_VECTOR(3 downto 0);
+signal car2: STD_LOGIC_VECTOR(1 downto 0);
+
 signal s1, s2: STD_LOGIC_VECTOR(11 downto 0);
 signal sum: STD_LOGIC_VECTOR(11 downto 0);
 signal carries: STD_LOGIC_VECTOR(11 downto 0);
@@ -41,32 +45,31 @@ signal x1, x2: STD_LOGIC_VECTOR(7 downto 0);
 signal x_carry: STD_LOGIC_VECTOR(7 downto 0);
 signal z1, z2: STD_LOGIC_VECTOR(3 downto 0);
 
-signal HA_result: STD_LOGIC_VECTOR(1 downto 0);
-signal car: STD_LOGIC_VECTOR(3 downto 0);
-signal car2: STD_LOGIC_VECTOR(1 downto 0);
 
-
--- Optimized Approximate Half Adder (HA)
+-- Approximate Half Adder
 function approx_HA(a, b : std_logic) return std_logic_vector is
     variable result : std_logic_vector(1 downto 0);
-begin
-    result := (a and b) & (a or b);  -- Concatenation avoids extra logic
+    begin
+    result(0) := a or b;  -- Sum
+    result(1) := a and b;  -- Carry
     return result;
 end approx_HA;
-
--- Optimized Approximate 3:2 Compressor
+ 
+-- Approximate 3:2 Compressor
 function approx_32(P0, P1, P2: std_logic) return std_logic_vector is
     variable result: std_logic_vector(1 downto 0);
-begin
-    result := ((P0 or P1) and P2) & (P0 or P1);  -- Less AND/OR usage
+    begin
+        result(0) := P0 or P1;           -- First output
+        result(1) := (P0 and P1) or P2;  -- Second output
     return result;
 end approx_32;
 
--- Optimized Approximate 4:2 Compressor
+-- Approximate 4:2 Compressor
 function approx_42(P0, P1, P2, P3: std_logic) return std_logic_vector is
     variable result: std_logic_vector(1 downto 0);
-begin
-    result := ((P0 or P1) or P2 or P3) & (P0 or P1 or (P2 and P3));
+    begin
+        result(0) := P0 or P1 or (P2 and P3);  -- First output
+        result(1) := (P0 and P1) or P2 or P3;  -- Second output
     return result;
 end approx_42;
 
@@ -212,6 +215,7 @@ begin
         gen(j)(8) <= A(7)      when (plus1_out(j) or plus2_out(j)) = '1' else 
                      A_comp(7) when (minus1_out(j) or minus2_out(j)) = '1' else '0';
         gen(j)(15 downto 9) <= (others => gen(j)(8));
+--        gen(j)((14-j*2) downto 9) <= (others => gen(j)(8));
     end generate all_pp_gen;
     
     
@@ -233,9 +237,12 @@ begin
     pp_gen1: for i in 3 to 7 generate
         comp(i) <= approx_42(gen(0)(i+3), gen(1)(i+1), gen(2)(i-1), gen(3)(i-3));
     end generate;
- 
+
+    
    
-    car2(0) <= gen(0)(10) and gen(1)(8) and gen(2)(6);  -- -- previously it was car2(0)<='0'; car2(1)<='0';
+   
+   
+    car2(0) <= gen(0)(10) and gen(1)(8) and gen(2)(6);
     car2(1) <= gen(1)(8) and gen(2)(6) and gen(3)(4);
 
     Type_A: for i in 0 to 7 generate 
@@ -251,7 +258,8 @@ begin
             O5 => s1(i),
             O6 => s2(i)
         );
-    end generate Type_A; 
+    end generate Type_A;
+    
     
     Type_B: for i in 0 to 3 generate 
         lut_inst1: LUT6_2 
@@ -330,6 +338,10 @@ begin
     
     prod(14 downto 3) <= sum;
     prod(15) <= A(7) xor B(7);
+
+
+	
+    
 
 
 

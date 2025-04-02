@@ -3,8 +3,8 @@
 +-------------------------+------+-------+------------+-----------+-------+
 |        Site Type        | Used | Fixed | Prohibited | Available | Util% |
 +-------------------------+------+-------+------------+-----------+-------+
-| Slice LUTs*             |   47 |     0 |          0 |     20800 |  0.23 |
-|   LUT as Logic          |   47 |     0 |          0 |     20800 |  0.23 |
+| Slice LUTs*             |   52 |     0 |          0 |     20800 |  0.25 |
+|   LUT as Logic          |   52 |     0 |          0 |     20800 |  0.25 |
 |   LUT as Memory         |    0 |     0 |          0 |      9600 |  0.00 |
 | Slice Registers         |    0 |     0 |          0 |     41600 |  0.00 |
 |   Register as Flip Flop |    0 |     0 |          0 |     41600 |  0.00 |
@@ -60,28 +60,28 @@
 +----------+------+---------------------+
 | Ref Name | Used | Functional Category |
 +----------+------+---------------------+
-| LUT5     |   35 |                 LUT |
-| LUT6     |   29 |                 LUT |
+| LUT6     |   37 |                 LUT |
+| LUT5     |   25 |                 LUT |
 | OBUF     |   16 |                  IO |
 | IBUF     |   16 |                  IO |
-| LUT2     |    9 |                 LUT |
-| LUT4     |    6 |                 LUT |
+| LUT2     |   15 |                 LUT |
+| LUT3     |    7 |                 LUT |
 | CARRY4   |    5 |          CarryLogic |
-| LUT3     |    4 |                 LUT |
+| LUT4     |    4 |                 LUT |
 +----------+------+---------------------+
 
 
  Power Usage Summary:
 ---------------------
 +--------------------------+--------------+
-| Total On-Chip Power (W)  | 6.673        |
+| Total On-Chip Power (W)  | 6.382        |
 | Design Power Budget (W)  | Unspecified* |
 | Power Budget Margin (W)  | NA           |
-| Dynamic (W)              | 6.573        |
-| Device Static (W)        | 0.100        |
+| Dynamic (W)              | 6.285        |
+| Device Static (W)        | 0.098        |
 | Effective TJA (C/W)      | 5.0          |
-| Max Ambient (C)          | 51.6         |
-| Junction Temperature (C) | 58.4         |
+| Max Ambient (C)          | 53.1         |
+| Junction Temperature (C) | 56.9         |
 | Confidence Level         | Low          |
 | Setting File             | ---          |
 | Simulation Activity File | ---          |
